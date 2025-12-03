@@ -4,11 +4,11 @@ import re
 import emoji
 from ftfy import fix_text
 from transformers import DebertaV2TokenizerFast
-from Model.model import EmotionClassifier   # ← import your model class
+from model import EmotionClassifier   # ← import your model class
 
 MODEL_NAME = "microsoft/deberta-v3-large"
 MAX_LEN = 256
-MODEL_PATH = "../../best_deberta_model.pt"
+MODEL_PATH = "./best_model_deberta.pt"
 
 
 # ---------------------- TEXT CLEANING ----------------------
