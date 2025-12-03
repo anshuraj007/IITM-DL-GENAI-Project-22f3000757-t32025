@@ -3,7 +3,7 @@ import torch
 import re
 import emoji
 from ftfy import fix_text
-from transformers import DebertaV2TokenizerFast
+from transformers import DebertaV2Tokenizer
 from model import EmotionClassifier   # ← import your model class
 
 MODEL_NAME = "microsoft/deberta-v3-large"
@@ -21,7 +21,7 @@ def clean_text(text):
     return text
 
 # ---------------------- LOAD MODEL -------------------------
-tokenizer = DebertaV2TokenizerFast.from_pretrained(MODEL_NAME)
+tokenizer = DebertaV2Tokenizer.from_pretrained(MODEL_NAME,local_files_only=True,use_fast=True)
 
 @st.cache_resource
 def load_model():
