@@ -1,18 +1,32 @@
-import streamlit as st
+import os
 import torch
-import re
-import emoji
-from ftfy import fix_text
+from model import EmotionClassifier
 from transformers import DebertaV2Tokenizer
-from model import EmotionClassifier   # ← import your model class
+import requests
 
+# ---------------- CONFIG ----------------
 MODEL_NAME = "microsoft/deberta-v3-large"
-MAX_LEN = 256
+MODEL_DRIVE_URL = "YOUR_DRIVE_DOWNLOAD_LINK_HERE"  # <- replace with direct file link
 MODEL_PATH = "./best_model_deberta.pt"
+MAX_LEN = 64
 
+# ---------------- DOWNLOAD MODEL IF NOT EXISTS ----------------
+if not os.path.exists(MODEL_PATH):
+    print("Downloading model from Drive... ⬇️")
+    r = requests.get(MODEL_DRIVE_URL, stream=True)
+    with open(MODEL_PATH, "wb") as f:
+        total = 0
+        for chunk in r.iter_content(chunk_size=1024*1024):
+            if chunk:
+                f.write(chunk)
+                total += len(chunk)
+                print(f"\rDownloaded {total//1024//1024} MB", end="")
+    print("\n✅ Model download complete!")
 
-# ---------------------- TEXT CLEANING ----------------------
+# ---------------- TEXT CLEANING ----------------
 def clean_text(text):
+    import re, emoji
+    from ftfy import fix_text
     text = fix_text(text)
     text = re.sub(r'http\S+|www.\S+', '<URL>', text)
     text = re.sub(r'@\w+', '<USER>', text)
@@ -20,52 +34,44 @@ def clean_text(text):
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
-# ---------------------- LOAD MODEL -------------------------
-tokenizer = DebertaV2Tokenizer.from_pretrained(MODEL_NAME,local_files_only=True,use_fast=True)
+# ---------------- LOAD TOKENIZER ----------------
+tokenizer = DebertaV2Tokenizer.from_pretrained(MODEL_NAME, local_files_only=True, use_fast=True)
 
-@st.cache_resource
+# ---------------- LOAD MODEL ----------------
 def load_model():
-    model = EmotionClassifier(model_name=MODEL_NAME)
-    model.load_state_dict(torch.load(MODEL_PATH, map_location="cpu"))
-    model.eval()
-    return model
+    try:
+        model = EmotionClassifier(model_name=MODEL_NAME)
+        model.load_state_dict(torch.load(MODEL_PATH, map_location="cpu"))
+        model.eval()
+        return model
+    except Exception as e:
+        print("❌ Error loading model:", e)
+        return None
 
 model = load_model()
-st.success("✅ Model Loaded Successfully!")
+print("✅ Model loaded successfully!")
 
-# ---------------------- STREAMLIT UI ------------------------
-st.title("🔍 Emotion Detection (DeBERTa-v3-Large)")
-st.write("Enter your text below, and the model will predict emotions.")
+# ---------------- INFERENCE ----------------
+sample_text = "I am really tensed about the results!"
+cleaned_text = clean_text(sample_text)
 
-user_input = st.text_area("Enter text")
+encoded = tokenizer(
+    cleaned_text,
+    padding='max_length',
+    truncation=True,
+    max_length=MAX_LEN,
+    return_tensors="pt"
+)
 
-if st.button("Predict"):
-    if not user_input.strip():
-        st.warning("Text cannot be empty!")
-    else:
-        cleaned = clean_text(user_input)
+with torch.no_grad():
+    logits = model(
+        input_ids=encoded["input_ids"],
+        attention_mask=encoded["attention_mask"]
+    )
 
-        encoded = tokenizer(
-            cleaned,
-            padding='max_length',
-            truncation=True,
-            max_length=MAX_LEN,
-            return_tensors="pt"
-        )
+probs = torch.sigmoid(logits).numpy()[0]
+emotions = ["anger", "fear", "joy", "sadness", "surprise"]
 
-        with torch.no_grad():
-            logits = model(
-                input_ids=encoded["input_ids"],
-                attention_mask=encoded["attention_mask"]
-            )
-
-        probs = torch.sigmoid(logits).numpy()[0]
-
-        emotions = ["anger", "fear", "joy", "sadness", "surprise"]
-
-        st.subheader("🧠 Predictions")
-        for emo, score in zip(emotions, probs):
-            st.write(f"**{emo}**: {score:.4f}")
-
-        st.subheader("📊 Emotion Scores")
-        st.bar_chart({emo: probs[i] for i, emo in enumerate(emotions)})
+print("Predicted Emotion Probabilities:")
+for emo, score in zip(emotions, probs):
+    print(f"{emo}: {score:.4f}")
