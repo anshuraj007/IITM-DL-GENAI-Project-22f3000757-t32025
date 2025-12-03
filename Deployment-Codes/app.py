@@ -8,7 +8,8 @@ from Model.model import EmotionClassifier   # ← import your model class
 
 MODEL_NAME = "microsoft/deberta-v3-large"
 MAX_LEN = 256
-MODEL_PATH = "../best_deberta_model.pt"   # ← correct relative path from App/app.py
+MODEL_PATH = "../../best_deberta_model.pt"
+
 
 # ---------------------- TEXT CLEANING ----------------------
 def clean_text(text):
