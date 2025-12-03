@@ -1,0 +1,7 @@
+streamlit
+torch
+transformers
+ftfy
+emoji
+accelerate
+scikit-learn
