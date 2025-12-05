@@ -78,7 +78,12 @@ This project focuses on building a **robust emotion classification system** capa
 
 ---
 
+---
+# Deployment
 
+* The model is deployed on HuggingFace.
+* Link to the deployed mode: `https://huggingface.co/spaces/rajanshu22f3/deploy-sentiment-analysis-app` 
+---
 
 
 ## ✨ Closing Note
